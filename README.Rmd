@@ -14,36 +14,24 @@ knitr::opts_chunk$set(
 )
 ```
 
-# *To the reader* 
-
-Welcome to the R package building helper *readme2pkg.template*!
-
-Below, is a readme that provides steps for building a package.  This readme acts as a worksheet, checklist, and control document as functions used in package building are included within and can be used in advancing development.  
-
-We'll use the `{readme2pkg}` helper package to send code chunks to different directories in the package.  
-
-To install `{readme2pkg}`:
-
-```
-
-remotes::install_github("EvaMaeRey/readme2pkg")
-
-```
 
 # Part 0. Proposal
 
-Proposing the {xxxx} package! 🦄 
+Proposing the {knitrExtra} package! 🦄 
 <!-- (typical package introduction write up; but actually aspirational) -->
 
-The goal of {xxxx} is to make ... easier.
+The goal of {knitrExtra} is to make some of my favorite functionality a little more accessible and usable interactively (in RStudio, I'm pretty much piggy backing on Kelly Bodwin's work on this).
+
+
 
 
 Without the package, we live in the effort-ful world that follows 🏋:
 
 ```{r}
-x <- 4
+knitr::knit_code$get("times_two") |> as.vector()
+knitr::knit_code$get() |> names()
 
-2*x
+
 
 ```
 
@@ -67,19 +55,200 @@ xxxxx::times_two(x = 4)
 Here is a function that will do some work...
 
 
-```{r times_two}
-times_two <- function(x){
+```{r chunk_code_get_static}
+chunk_code_get_static <- function(chunk_name){
   
-  x*2
+  knitr::knit_code$get(chunk_name) |> as.vector()
   
 }
 ```
 
+```{r chunk_names_get_static}
+chunk_names_get_static <- function(){
+  
+  knitr::all_labels()
+  
+}
+```
+
+```{r}
+knitr::knit_code$get()
+```
 
 ## Try it out
 
 ```{r}
-times_two(4)
+chunk_code_get_static("chunk_code_get_static")
+chunk_code_get_static("chunk_names_get_static")
+```
+
+
+```{r}
+# Awesome!
+check_is_live <- function(){
+  
+  is_live <- FALSE
+  
+  # Check to see if we're in editor context
+  if (requireNamespace("rstudioapi", quietly = TRUE) &&
+      rstudioapi::isAvailable()) {
+
+    is_live <- tryCatch({
+      rstudioapi::getSourceEditorContext()
+      TRUE
+    }, error = function(e) FALSE)
+
+  }  
+  
+  return(is_live)
+  
+}
+
+# so cool!
+text_chunk_extract <- function(.text, chunk_name) {
+
+  # Find the start of the desired chunk
+  chunk_regex <- paste0('\\`\\`\\`\\{[A-z]+ ', chunk_name, '(\\}|(,.*\\}))$')
+
+  start_chunk <- .text |>
+    stringr::str_which(chunk_regex)
+
+  if (length(start_chunk) == 0) {
+
+    stop(paste0("Error: No chunk found with name '", chunk_name, "'"))
+
+  } else if (length(start_chunk) > 1) {
+
+    stop(paste0("Error: Duplicate chunk name '", chunk_name, "'"))
+
+  }
+
+  end_chunk <- .text[-c(1:start_chunk)] |>
+    stringr::str_which(stringr::fixed("```")) |>
+    min() + start_chunk
+
+  chunk_text <- .text[(start_chunk):(end_chunk)] |>
+    stringr::str_c(collapse = "\n")
+
+  attributes(chunk_text) <- NULL
+
+  return(chunk_text)
+
+}
+
+chunk_remove_fencing_and_options <- function(code_chunk){
+  
+  # does not yet, in fact, remove options like these: 
+  # | my-chunk, echo = FALSE, fig.width = 10,
+  # | fig.cap = "This is a long long
+  # |   long long caption."
+  
+ chunk_as_vec <- stringr::str_split(code_chunk,"\\n")[[1]] 
+ 
+ # remove fencing which are first and last lines
+ return(chunk_as_vec[2:(length(chunk_as_vec)-1)])
+  
+}
+
+# wow!
+return_chunk_code_live <- function(chunk_name) {
+
+  
+    ed        <- rstudioapi::getSourceEditorContext()
+    source    <- ed$contents
+
+    # can we use knitr tools to directly parse source for us? 
+    # tmp       <- tempfile()
+    # writeLines(source, tmp)
+    # readLines(tmp)
+    # knitr::knit_code$get(name = tmp)
+    
+    my_code_chunk  <- text_chunk_extract(.text = source, chunk_name)
+
+    # If neither of those worked, error
+    if (is.null(my_code_chunk)) {
+
+    stop(paste0("Error: No chunk found with name '", chunk_name, "'"))
+
+    }
+
+    # remove chunk fencing, first and last lines
+    my_code <- chunk_remove_fencing_and_options(my_code_chunk)
+    
+    return(my_code)
+  
+}
+
+#' Title
+#'
+#' @param chunk_name a character string with the name of the chunk of interest
+#'
+#' @return a vector of the code contained in the referenced chunk
+#' @export 
+#'
+#' @examples
+chunk_code_get <- function(chunk_name){
+  
+  is_live <- check_is_live()
+  
+  if(is_live){
+    return_chunk_code_live(chunk_name)
+  }else{
+  chunk_code_get_static(chunk_name = chunk_name)
+    }
+
+}
+```
+
+
+```{r}
+chunk_code_get("chunk_code_get_static")
+```
+
+
+```{r, eval = F}
+chunk_names_get_live <- function(chunk_name) {
+
+    ed        <- rstudioapi::getSourceEditorContext()
+    source    <- ed$contents
+
+    
+    first_fence <- source[grep("\\`\\`\\`\\{r ", source)]
+    
+    names_of_named_chunks <- first_fence |> 
+      stringr::str_remove("\\`\\`\\`\\{r ") |>
+      stringr::str_remove(",.+")
+
+    names_of_named_chunks
+    
+}
+```
+
+
+```{r chunk_names_get}
+chunk_names_get <- function(){
+  
+  is_live <- check_is_live()
+  
+  if(is_live){
+    chunk_names_get_live()
+  }else{
+  chunk_names_get_static()
+    }
+
+}
+```
+
+
+```{r chunk_to_dir}
+chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R") 
+{
+    for (i in 1:length(chunk_name)) {
+        writeLines(paste(chunk_code_get(chunk_name = chunk_name[i]), 
+            collapse = "\n"), con = paste0(dir, "/", chunk_name[i], 
+            extension))
+    }
+}
 ```
 
 
