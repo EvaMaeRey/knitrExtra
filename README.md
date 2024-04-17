@@ -3,6 +3,11 @@
   - [Part I. Work out functionality 🚧
     ✅](#part-i-work-out-functionality--)
       - [Try it out](#try-it-out)
+  - [Try it out\! Should return equivelantly in live session or
+    ‘knitted’
+    version.](#try-it-out-should-return-equivelantly-in-live-session-or-knitted-version)
+  - [Return chunk names](#return-chunk-names)
+  - [Code from chunks to files](#code-from-chunks-to-files)
   - [Part II. Packaging and documentation 🚧
     ✅](#part-ii-packaging-and-documentation--)
       - [Phase 1. Minimal working
@@ -26,7 +31,8 @@ Proposing the {knitrExtra} package\! 🦄
 
 The goal of {knitrExtra} is to make some of my favorite functionality a
 little more accessible and usable interactively (in RStudio, I’m pretty
-much piggy backing on Kelly Bodwin’s work on this).
+much piggy backing on Kelly Bodwin’s vision and work on this - led the
+way as to how-to w/ rstudio API).
 
 Without the package, we live in the effort-ful world that follows 🏋:
 
@@ -35,33 +41,40 @@ knitr::knit_code$get("times_two") |> as.vector()
 #> NULL
 knitr::knit_code$get() |> names()
 #>  [1] "unnamed-chunk-1"           "unnamed-chunk-2"          
-#>  [3] "chunk_code_get_static"     "chunk_names_get_static"   
-#>  [5] "unnamed-chunk-3"           "unnamed-chunk-4"          
-#>  [7] "unnamed-chunk-5"           "unnamed-chunk-6"          
-#>  [9] "unnamed-chunk-7"           "chunk_names_get"          
-#> [11] "chunk_to_dir"              "unnamed-chunk-8"          
-#> [13] "unnamed-chunk-9"           "unnamed-chunk-10"         
-#> [15] "test_calc_times_two_works" "unnamed-chunk-11"         
-#> [17] "unnamed-chunk-12"          "unnamed-chunk-13"         
-#> [19] "unnamed-chunk-14"          "unnamed-chunk-15"         
-#> [21] "unnamed-chunk-16"
+#>  [3] "chunk_code_get_static"     "unnamed-chunk-3"          
+#>  [5] "liveness_helpers"          "chunk_code_get_live"      
+#>  [7] "chunk_code_get"            "unnamed-chunk-4"          
+#>  [9] "chunk_names_get_static"    "chunk_names_get_live"     
+#> [11] "chunk_names_get"           "chunk_to_dir"             
+#> [13] "chunk_variants_to_dir"     "unnamed-chunk-5"          
+#> [15] "unnamed-chunk-6"           "unnamed-chunk-7"          
+#> [17] "test_calc_times_two_works" "unnamed-chunk-8"          
+#> [19] "unnamed-chunk-9"           "unnamed-chunk-10"         
+#> [21] "unnamed-chunk-11"          "unnamed-chunk-12"         
+#> [23] "unnamed-chunk-13"
 ```
 
-With the {xxxx} package, we’ll live in a different world (🦄 🦄 🦄) where
-the task is a snap 🫰:
+And we can’t access chunk names from within a live .Rmd, or the code
+from chunks in the document we are working on. But this kind of
+‘self-awareness’ can be really useful
+
+With the {knitrExtra} package, we’ll live in a different world (🦄 🦄 🦄)
+where the task is a snap 🫰:
 
 Proposed API:
 
 ``` 
 
-library(xxxxx)
+library(knitrExtra)
 
-xxxxx::times_two(x = 4)
+knitrExtra::chunk_code_get()
+knitrExtra::chunk_names_get()
 ```
 
 # Part I. Work out functionality 🚧 ✅
 
-Here is a function that will do some work…
+First, let’s just create a designated function for getting code from a
+chunk via the knit\_code$get method.
 
 ``` r
 chunk_code_get_static <- function(chunk_name){
@@ -71,371 +84,9 @@ chunk_code_get_static <- function(chunk_name){
 }
 ```
 
-``` r
-chunk_names_get_static <- function(){
-  
-  knitr::all_labels()
-  
-}
-```
-
-```` r
-knitr::knit_code$get()
-#> $`unnamed-chunk-1`
-#> [1] "knitr::opts_chunk$set(" "  collapse = TRUE,"     "  comment = \"#>\","   
-#> [4] "  eval = T"             ")"                     
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$include
-#> [1] FALSE
-#> 
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-1"
-#> 
-#> 
-#> $`unnamed-chunk-2`
-#> [1] "knitr::knit_code$get(\"times_two\") |> as.vector()"
-#> [2] "knitr::knit_code$get() |> names()"                 
-#> [3] ""                                                  
-#> [4] ""                                                  
-#> [5] ""                                                  
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-2"
-#> 
-#> 
-#> $chunk_code_get_static
-#> [1] "chunk_code_get_static <- function(chunk_name){"   
-#> [2] "  "                                               
-#> [3] "  knitr::knit_code$get(chunk_name) |> as.vector()"
-#> [4] "  "                                               
-#> [5] "}"                                                
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "chunk_code_get_static"
-#> 
-#> 
-#> $chunk_names_get_static
-#> [1] "chunk_names_get_static <- function(){"
-#> [2] "  "                                   
-#> [3] "  knitr::all_labels()"                
-#> [4] "  "                                   
-#> [5] "}"                                    
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "chunk_names_get_static"
-#> 
-#> 
-#> $`unnamed-chunk-3`
-#> [1] "knitr::knit_code$get()"
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-3"
-#> 
-#> 
-#> $`unnamed-chunk-4`
-#> [1] "chunk_code_get_static(\"chunk_code_get_static\")" 
-#> [2] "chunk_code_get_static(\"chunk_names_get_static\")"
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-4"
-#> 
-#> 
-#> $`unnamed-chunk-5`
-#>   [1] "# Awesome!"                                                                               
-#>   [2] "check_is_live <- function(){"                                                             
-#>   [3] "  "                                                                                       
-#>   [4] "  is_live <- FALSE"                                                                       
-#>   [5] "  "                                                                                       
-#>   [6] "  # Check to see if we're in editor context"                                              
-#>   [7] "  if (requireNamespace(\"rstudioapi\", quietly = TRUE) &&"                                
-#>   [8] "      rstudioapi::isAvailable()) {"                                                       
-#>   [9] ""                                                                                         
-#>  [10] "    is_live <- tryCatch({"                                                                
-#>  [11] "      rstudioapi::getSourceEditorContext()"                                               
-#>  [12] "      TRUE"                                                                               
-#>  [13] "    }, error = function(e) FALSE)"                                                        
-#>  [14] ""                                                                                         
-#>  [15] "  }  "                                                                                    
-#>  [16] "  "                                                                                       
-#>  [17] "  return(is_live)"                                                                        
-#>  [18] "  "                                                                                       
-#>  [19] "}"                                                                                        
-#>  [20] ""                                                                                         
-#>  [21] "# so cool!"                                                                               
-#>  [22] "text_chunk_extract <- function(.text, chunk_name) {"                                      
-#>  [23] ""                                                                                         
-#>  [24] "  # Find the start of the desired chunk"                                                  
-#>  [25] "  chunk_regex <- paste0('\\\\`\\\\`\\\\`\\\\{[A-z]+ ', chunk_name, '(\\\\}|(,.*\\\\}))$')"
-#>  [26] ""                                                                                         
-#>  [27] "  start_chunk <- .text |>"                                                                
-#>  [28] "    stringr::str_which(chunk_regex)"                                                      
-#>  [29] ""                                                                                         
-#>  [30] "  if (length(start_chunk) == 0) {"                                                        
-#>  [31] ""                                                                                         
-#>  [32] "    stop(paste0(\"Error: No chunk found with name '\", chunk_name, \"'\"))"               
-#>  [33] ""                                                                                         
-#>  [34] "  } else if (length(start_chunk) > 1) {"                                                  
-#>  [35] ""                                                                                         
-#>  [36] "    stop(paste0(\"Error: Duplicate chunk name '\", chunk_name, \"'\"))"                   
-#>  [37] ""                                                                                         
-#>  [38] "  }"                                                                                      
-#>  [39] ""                                                                                         
-#>  [40] "  end_chunk <- .text[-c(1:start_chunk)] |>"                                               
-#>  [41] "    stringr::str_which(stringr::fixed(\"```\")) |>"                                       
-#>  [42] "    min() + start_chunk"                                                                  
-#>  [43] ""                                                                                         
-#>  [44] "  chunk_text <- .text[(start_chunk):(end_chunk)] |>"                                      
-#>  [45] "    stringr::str_c(collapse = \"\\n\")"                                                   
-#>  [46] ""                                                                                         
-#>  [47] "  attributes(chunk_text) <- NULL"                                                         
-#>  [48] ""                                                                                         
-#>  [49] "  return(chunk_text)"                                                                     
-#>  [50] ""                                                                                         
-#>  [51] "}"                                                                                        
-#>  [52] ""                                                                                         
-#>  [53] "chunk_remove_fencing_and_options <- function(code_chunk){"                                
-#>  [54] "  "                                                                                       
-#>  [55] "  # does not yet, in fact, remove options like these: "                                   
-#>  [56] "  # | my-chunk, echo = FALSE, fig.width = 10,"                                            
-#>  [57] "  # | fig.cap = \"This is a long long"                                                    
-#>  [58] "  # |   long long caption.\""                                                             
-#>  [59] "  "                                                                                       
-#>  [60] " chunk_as_vec <- stringr::str_split(code_chunk,\"\\\\n\")[[1]] "                          
-#>  [61] " "                                                                                        
-#>  [62] " # remove fencing which are first and last lines"                                         
-#>  [63] " return(chunk_as_vec[2:(length(chunk_as_vec)-1)])"                                        
-#>  [64] "  "                                                                                       
-#>  [65] "}"                                                                                        
-#>  [66] ""                                                                                         
-#>  [67] "# wow!"                                                                                   
-#>  [68] "return_chunk_code_live <- function(chunk_name) {"                                         
-#>  [69] ""                                                                                         
-#>  [70] "  "                                                                                       
-#>  [71] "    ed        <- rstudioapi::getSourceEditorContext()"                                    
-#>  [72] "    source    <- ed$contents"                                                             
-#>  [73] ""                                                                                         
-#>  [74] "    # can we use knitr tools to directly parse source for us? "                           
-#>  [75] "    # tmp       <- tempfile()"                                                            
-#>  [76] "    # writeLines(source, tmp)"                                                            
-#>  [77] "    # readLines(tmp)"                                                                     
-#>  [78] "    # knitr::knit_code$get(name = tmp)"                                                   
-#>  [79] "    "                                                                                     
-#>  [80] "    my_code_chunk  <- text_chunk_extract(.text = source, chunk_name)"                     
-#>  [81] ""                                                                                         
-#>  [82] "    # If neither of those worked, error"                                                  
-#>  [83] "    if (is.null(my_code_chunk)) {"                                                        
-#>  [84] ""                                                                                         
-#>  [85] "    stop(paste0(\"Error: No chunk found with name '\", chunk_name, \"'\"))"               
-#>  [86] ""                                                                                         
-#>  [87] "    }"                                                                                    
-#>  [88] ""                                                                                         
-#>  [89] "    # remove chunk fencing, first and last lines"                                         
-#>  [90] "    my_code <- chunk_remove_fencing_and_options(my_code_chunk)"                           
-#>  [91] "    "                                                                                     
-#>  [92] "    return(my_code)"                                                                      
-#>  [93] "  "                                                                                       
-#>  [94] "}"                                                                                        
-#>  [95] ""                                                                                         
-#>  [96] "#' Title"                                                                                 
-#>  [97] "#'"                                                                                       
-#>  [98] "#' @param chunk_name a character string with the name of the chunk of interest"           
-#>  [99] "#'"                                                                                       
-#> [100] "#' @return a vector of the code contained in the referenced chunk"                        
-#> [101] "#' @export "                                                                              
-#> [102] "#'"                                                                                       
-#> [103] "#' @examples"                                                                             
-#> [104] "chunk_code_get <- function(chunk_name){"                                                  
-#> [105] "  "                                                                                       
-#> [106] "  is_live <- check_is_live()"                                                             
-#> [107] "  "                                                                                       
-#> [108] "  if(is_live){"                                                                           
-#> [109] "    return_chunk_code_live(chunk_name)"                                                   
-#> [110] "  }else{"                                                                                 
-#> [111] "  chunk_code_get_static(chunk_name = chunk_name)"                                         
-#> [112] "    }"                                                                                    
-#> [113] ""                                                                                         
-#> [114] "}"                                                                                        
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-5"
-#> 
-#> 
-#> $`unnamed-chunk-6`
-#> [1] "chunk_code_get(\"chunk_code_get_static\")"
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-6"
-#> 
-#> 
-#> $`unnamed-chunk-7`
-#>  [1] "chunk_names_get_live <- function(chunk_name) {"                     
-#>  [2] ""                                                                   
-#>  [3] "    ed        <- rstudioapi::getSourceEditorContext()"              
-#>  [4] "    source    <- ed$contents"                                       
-#>  [5] ""                                                                   
-#>  [6] "    "                                                               
-#>  [7] "    first_fence <- source[grep(\"\\\\`\\\\`\\\\`\\\\{r \", source)]"
-#>  [8] "    "                                                               
-#>  [9] "    names_of_named_chunks <- first_fence |> "                       
-#> [10] "      stringr::str_remove(\"\\\\`\\\\`\\\\`\\\\{r \") |>"           
-#> [11] "      stringr::str_remove(\",.+\")"                                 
-#> [12] ""                                                                   
-#> [13] "    names_of_named_chunks"                                          
-#> [14] "    "                                                               
-#> [15] "}"                                                                  
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$eval
-#> F
-#> 
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-7"
-#> 
-#> 
-#> $chunk_names_get
-#>  [1] "chunk_names_get <- function(){" "  "                            
-#>  [3] "  is_live <- check_is_live()"   "  "                            
-#>  [5] "  if(is_live){"                 "    chunk_names_get_live()"    
-#>  [7] "  }else{"                       "  chunk_names_get_static()"    
-#>  [9] "    }"                          ""                              
-#> [11] "}"                             
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "chunk_names_get"
-#> 
-#> 
-#> $chunk_to_dir
-#> [1] "chunk_to_dir <- function (chunk_name, dir = \"R/\", extension = \".R\") " 
-#> [2] "{"                                                                        
-#> [3] "    for (i in 1:length(chunk_name)) {"                                    
-#> [4] "        writeLines(paste(chunk_code_get(chunk_name = chunk_name[i]), "    
-#> [5] "            collapse = \"\\n\"), con = paste0(dir, \"/\", chunk_name[i], "
-#> [6] "            extension))"                                                  
-#> [7] "    }"                                                                    
-#> [8] "}"                                                                        
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "chunk_to_dir"
-#> 
-#> 
-#> $`unnamed-chunk-8`
-#>  [1] "devtools::create(\".\") # Bit 1. 1X"                                                                  
-#>  [2] "### Bit 2a: dependencies to functions using '::' syntax to pkg functions "                            
-#>  [3] "usethis::use_package(\"ggplot2\") # Bit 2b: document dependencies"                                    
-#>  [4] "readme2pkg::chunk_to_r(chunk_name = \"times_two\") # Bit 3: send code chunk with function to R folder"
-#>  [5] "devtools::check(pkg = \".\")  # Bit 4: check that package is minimally viable"                        
-#>  [6] "devtools::install(pkg = \".\", upgrade = \"never\") # Bit 5: install package locally"                 
-#>  [7] "usethis::use_lifecycle_badge(\"experimental\") # Bit 6: add lifecycle badge"                          
-#>  [8] "# Bit 7 (below): Write traditional readme"                                                            
-#>  [9] "# Bit 8: Compile readme"                                                                              
-#> [10] "# Bit 9: Push to githup"                                                                              
-#> [11] "# Bit 10: listen and iterate"                                                                         
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$eval
-#> F
-#> 
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-8"
-#> 
-#> 
-#> $`unnamed-chunk-9`
-#> [1] "library(mypackage)  ##<< change to your package name here"
-#> [2] "mypackage:::times_two(10)"                                
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$eval
-#> F
-#> 
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-9"
-#> 
-#> 
-#> $`unnamed-chunk-10`
-#> [1] "usethis::use_mit_license()"
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$eval
-#> F
-#> 
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-10"
-#> 
-#> 
-#> $test_calc_times_two_works
-#> [1] "library(testthat)"                   ""                                   
-#> [3] "test_that(\"calc times 2 works\", {" "  expect_equal(times_two(4), 8)"    
-#> [5] "  expect_equal(times_two(5), 10)"    "  "                                 
-#> [7] "})"                                 
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "test_calc_times_two_works"
-#> 
-#> attr(,"chunk_opts")$eval
-#> F
-#> 
-#> 
-#> $`unnamed-chunk-11`
-#> [1] "readme2pkg::chunk_to_tests_testthat(\"test_calc_times_two_works\")"
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$eval
-#> F
-#> 
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-11"
-#> 
-#> 
-#> $`unnamed-chunk-12`
-#> [1] "devtools::check(pkg = \".\")"
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$eval
-#> F
-#> 
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-12"
-#> 
-#> 
-#> $`unnamed-chunk-13`
-#> [1] "readLines(\"DESCRIPTION\")"
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$eval
-#> F
-#> 
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-13"
-#> 
-#> 
-#> $`unnamed-chunk-14`
-#> [1] "all <- sessionInfo() |> print() |> capture.output()"
-#> [2] "all[11:17]"                                         
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-14"
-#> 
-#> 
-#> $`unnamed-chunk-15`
-#> [1] "devtools::check(pkg = \".\")"
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$eval
-#> F
-#> 
-#> attr(,"chunk_opts")$error
-#> T
-#> 
-#> attr(,"chunk_opts")$results
-#> [1] "hide"
-#> 
-#> attr(,"chunk_opts")$warning
-#> F
-#> 
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-15"
-#> 
-#> 
-#> $`unnamed-chunk-16`
-#> [1] "fs::dir_tree(recurse = T)"
-#> attr(,"chunk_opts")
-#> attr(,"chunk_opts")$label
-#> [1] "unnamed-chunk-16"
-````
-
 ## Try it out
+
+If we knit our document we’ll see that these functions work
 
 ``` r
 chunk_code_get_static("chunk_code_get_static")
@@ -444,13 +95,13 @@ chunk_code_get_static("chunk_code_get_static")
 #> [3] "  knitr::knit_code$get(chunk_name) |> as.vector()"
 #> [4] "  "                                               
 #> [5] "}"
-chunk_code_get_static("chunk_names_get_static")
-#> [1] "chunk_names_get_static <- function(){"
-#> [2] "  "                                   
-#> [3] "  knitr::all_labels()"                
-#> [4] "  "                                   
-#> [5] "}"
 ```
+
+Now, both of the above functions work in a static context. To have get
+the same behavior ‘live’, we’ll use roughly Kelly Bodwin’s approach
+which takes advantage of the rstudioapi package.
+
+First here are some helper functions…
 
 ```` r
 # Awesome!
@@ -518,9 +169,13 @@ chunk_remove_fencing_and_options <- function(code_chunk){
  return(chunk_as_vec[2:(length(chunk_as_vec)-1)])
   
 }
+````
 
+Then we write the live analogue to chunk\_code\_get\_static
+
+``` r
 # wow!
-return_chunk_code_live <- function(chunk_name) {
+chunk_code_get_live <- function(chunk_name) {
 
   
     ed        <- rstudioapi::getSourceEditorContext()
@@ -547,7 +202,12 @@ return_chunk_code_live <- function(chunk_name) {
     return(my_code)
   
 }
+```
 
+And we finally combine the static and live versions into one function…
+`chunk_code_get()` which is exported.
+
+``` r
 #' Title
 #'
 #' @param chunk_name a character string with the name of the chunk of interest
@@ -567,7 +227,9 @@ chunk_code_get <- function(chunk_name){
     }
 
 }
-````
+```
+
+# Try it out\! Should return equivelantly in live session or ‘knitted’ version.
 
 ``` r
 chunk_code_get("chunk_code_get_static")
@@ -577,6 +239,24 @@ chunk_code_get("chunk_code_get_static")
 #> [4] "  "                                               
 #> [5] "}"
 ```
+
+# Return chunk names
+
+First we just alias knitr::all\_label() to a function that’s named more
+in line with others in this package.
+
+``` r
+chunk_names_get_static <- function(){
+  
+  knitr::all_labels()
+  
+}
+```
+
+Then we ust the rstudioapi package to look at the live document and pull
+out chunk names (just using regular expressions - don’t love this… Seems
+like source should be saved as a temp file and evaluated directly by
+knitr tools?)
 
 ``` r
 chunk_names_get_live <- function(chunk_name) {
@@ -596,6 +276,11 @@ chunk_names_get_live <- function(chunk_name) {
 }
 ```
 
+We combine the static and live versions into `chunk_names_get()` which
+should be exported. Note that the live v. static behavior is currently
+different and only named chunks will appear in the live list. This isn’t
+ideal, but it’s where the project is right now.
+
 ``` r
 chunk_names_get <- function(){
   
@@ -610,6 +295,14 @@ chunk_names_get <- function(){
 }
 ```
 
+# Code from chunks to files
+
+It is nice to be able to grab code from chunks and send them to files
+for the purpose of building packages from a single file like a readme.
+`chunk_to_dir` exists for this purpose. The defaults are that you are
+sending code from a package readme to an .R file in the R package
+folder.
+
 ``` r
 chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R") 
 {
@@ -618,6 +311,54 @@ chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R")
             collapse = "\n"), con = paste0(dir, "/", chunk_name[i], 
             extension))
     }
+}
+
+
+chunk_to_r <- function(chunk_name){
+  
+  chunk_to_dir(chunk_name = chunk_name)
+  
+}
+
+
+chunk_to_tests_testthat <- function (chunk_name) 
+{
+    chunk_to_dir(chunk_name = chunk_name, dir = "tests/testthat/")
+}
+```
+
+Finally, functionality (and the implementation) that I’m uncertain about
+is `chunk_variants_to_dir()` This is an interesting meta programming
+solution, perhaps.
+
+``` r
+chunk_variants_to_dir <- function (chunk_name, chunk_name_suffix = "_variants", 
+                                   file_name = NULL, 
+    dir = "R/", replace1, replacements1, replace2 = NULL, replacements2 = NULL, 
+    replace3 = NULL, replacements3 = NULL, replace4 = NULL, replacements4 = NULL) {
+    template <- return_chunk_code(chunk_name)
+    script_contents <- c()
+    if (is.null(file_name)) {
+        file_name <- paste0(chunk_name, chunk_name_suffix, ".R")
+    }
+    for (i in 1:length(replacements1)) {
+        template_mod <- stringr::str_replace_all(template, replace1, 
+            replacements1[i])
+        if (!is.null(replace2)) {
+            template_mod <- stringr::str_replace_all(template_mod, 
+                replace2, replacements2[i])
+        }
+        if (!is.null(replace3)) {
+            template_mod <- stringr::str_replace_all(template_mod, 
+                replace3, replacements3[i])
+        }
+        if (!is.null(replace4)) {
+            template_mod <- stringr::str_replace_all(template_mod, 
+                replace4, replacements4[i])
+        }
+        script_contents <- c(script_contents, template_mod)
+    }
+    writeLines(script_contents, paste0(dir, file_name))
 }
 ```
 

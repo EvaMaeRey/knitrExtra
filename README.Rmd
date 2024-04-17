@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 Proposing the {knitrExtra} package! 🦄 
 <!-- (typical package introduction write up; but actually aspirational) -->
 
-The goal of {knitrExtra} is to make some of my favorite functionality a little more accessible and usable interactively (in RStudio, I'm pretty much piggy backing on Kelly Bodwin's work on this).
+The goal of {knitrExtra} is to make some of my favorite functionality a little more accessible and usable interactively (in RStudio, I'm pretty much piggy backing on Kelly Bodwin's vision and work on this - led the way as to how-to w/ rstudio API).
 
 
 
@@ -31,20 +31,19 @@ Without the package, we live in the effort-ful world that follows 🏋:
 knitr::knit_code$get("times_two") |> as.vector()
 knitr::knit_code$get() |> names()
 
-
-
 ```
-
+And we can't access chunk names from within a live .Rmd, or the code from chunks in the document we are working on.  But this kind of 'self-awareness' can be really useful
   
-With the {xxxx} package, we'll live in a different world (🦄 🦄 🦄) where the task is a snap 🫰: 
+With the {knitrExtra} package, we'll live in a different world (🦄 🦄 🦄) where the task is a snap 🫰: 
 
 Proposed API:
 
 ```
 
-library(xxxxx)
+library(knitrExtra)
 
-xxxxx::times_two(x = 4)
+knitrExtra::chunk_code_get()
+knitrExtra::chunk_names_get()
 
 ```
 
@@ -52,8 +51,7 @@ xxxxx::times_two(x = 4)
 
 # Part I. Work out functionality  🚧 ✅ 
 
-Here is a function that will do some work...
-
+First, let's just create a designated function for getting code from a chunk via the knit_code$get method.
 
 ```{r chunk_code_get_static}
 chunk_code_get_static <- function(chunk_name){
@@ -63,27 +61,23 @@ chunk_code_get_static <- function(chunk_name){
 }
 ```
 
-```{r chunk_names_get_static}
-chunk_names_get_static <- function(){
-  
-  knitr::all_labels()
-  
-}
-```
 
-```{r}
-knitr::knit_code$get()
-```
+
 
 ## Try it out
 
+If we knit our document we'll see that these functions work
+
 ```{r}
 chunk_code_get_static("chunk_code_get_static")
-chunk_code_get_static("chunk_names_get_static")
 ```
 
+Now, both of the above functions work in a static context.  To have get the same behavior 'live', we'll use roughly Kelly Bodwin's approach which takes advantage of the rstudioapi package.  
 
-```{r}
+First here are some helper functions...
+
+
+```{r liveness_helpers}
 # Awesome!
 check_is_live <- function(){
   
@@ -149,9 +143,14 @@ chunk_remove_fencing_and_options <- function(code_chunk){
  return(chunk_as_vec[2:(length(chunk_as_vec)-1)])
   
 }
+```
 
+
+Then we write the live analogue to chunk_code_get_static
+
+```{r chunk_code_get_live}
 # wow!
-return_chunk_code_live <- function(chunk_name) {
+chunk_code_get_live <- function(chunk_name) {
 
   
     ed        <- rstudioapi::getSourceEditorContext()
@@ -178,7 +177,11 @@ return_chunk_code_live <- function(chunk_name) {
     return(my_code)
   
 }
+```
 
+And we finally combine the static and live versions into one function... `chunk_code_get()` which is exported.
+
+```{r chunk_code_get}
 #' Title
 #'
 #' @param chunk_name a character string with the name of the chunk of interest
@@ -200,13 +203,28 @@ chunk_code_get <- function(chunk_name){
 }
 ```
 
+# Try it out!  Should return equivelantly in live session or 'knitted' version.
 
 ```{r}
 chunk_code_get("chunk_code_get_static")
 ```
 
 
-```{r, eval = F}
+# Return chunk names
+
+First we just alias knitr::all_label() to a function that's named more in line with others in this package.  
+
+```{r chunk_names_get_static}
+chunk_names_get_static <- function(){
+  
+  knitr::all_labels()
+  
+}
+```
+
+Then we ust the rstudioapi package to look at the live document and pull out chunk names (just using regular expressions - don't love this... Seems like source should be saved as a temp file and evaluated directly by knitr tools?)
+
+```{r chunk_names_get_live}
 chunk_names_get_live <- function(chunk_name) {
 
     ed        <- rstudioapi::getSourceEditorContext()
@@ -224,6 +242,8 @@ chunk_names_get_live <- function(chunk_name) {
 }
 ```
 
+We combine the static and live versions into `chunk_names_get()` which should be exported.  Note that the live v. static behavior is currently different and only named chunks will appear in the live list.  This isn't ideal, but it's where the project is right now.
+
 
 ```{r chunk_names_get}
 chunk_names_get <- function(){
@@ -239,6 +259,12 @@ chunk_names_get <- function(){
 }
 ```
 
+# Code from chunks to files
+
+
+It is nice to be able to grab code from chunks and send them to files for the purpose of building packages from a single file like a readme.  `chunk_to_dir` exists for this purpose.  The defaults are that you are sending code from a package readme to an .R file in the R package folder. 
+
+
 
 ```{r chunk_to_dir}
 chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R") 
@@ -249,7 +275,55 @@ chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R")
             extension))
     }
 }
+
+
+chunk_to_r <- function(chunk_name){
+  
+  chunk_to_dir(chunk_name = chunk_name)
+  
+}
+
+
+chunk_to_tests_testthat <- function (chunk_name) 
+{
+    chunk_to_dir(chunk_name = chunk_name, dir = "tests/testthat/")
+}
 ```
+
+Finally, functionality (and the implementation) that I'm uncertain about is  `chunk_variants_to_dir()`  This is an interesting meta programming solution, perhaps. 
+
+
+```{r chunk_variants_to_dir}
+chunk_variants_to_dir <- function (chunk_name, chunk_name_suffix = "_variants", 
+                                   file_name = NULL, 
+    dir = "R/", replace1, replacements1, replace2 = NULL, replacements2 = NULL, 
+    replace3 = NULL, replacements3 = NULL, replace4 = NULL, replacements4 = NULL) {
+    template <- return_chunk_code(chunk_name)
+    script_contents <- c()
+    if (is.null(file_name)) {
+        file_name <- paste0(chunk_name, chunk_name_suffix, ".R")
+    }
+    for (i in 1:length(replacements1)) {
+        template_mod <- stringr::str_replace_all(template, replace1, 
+            replacements1[i])
+        if (!is.null(replace2)) {
+            template_mod <- stringr::str_replace_all(template_mod, 
+                replace2, replacements2[i])
+        }
+        if (!is.null(replace3)) {
+            template_mod <- stringr::str_replace_all(template_mod, 
+                replace3, replacements3[i])
+        }
+        if (!is.null(replace4)) {
+            template_mod <- stringr::str_replace_all(template_mod, 
+                replace4, replacements4[i])
+        }
+        script_contents <- c(script_contents, template_mod)
+    }
+    writeLines(script_contents, paste0(dir, file_name))
+}
+```
+
 
 
 # Part II. Packaging and documentation  🚧 ✅ 
