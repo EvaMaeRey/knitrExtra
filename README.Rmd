@@ -27,14 +27,22 @@ The goal of {knitrExtra} is to make some of my favorite functionality a little m
 
 Without the package, we live in the effort-ful world that follows 🏋:
 
-```{r}
-knitr::knit_code$get("times_two") |> as.vector()
+```{r, eval = T}
+# grabbing code from a chunk: 
+knitr::knit_code$get("chunk_code_get_static") |> as.vector()
+
+# getting the names of chunks:
 knitr::knit_code$get() |> names()
 
+# sending code from a chunk to a stand alone file
+knitr::knit_code$get("chunk_code_get_static") |> 
+  as.vector() |> 
+  writeLines("R/chunk_code_get_static.R")
+
 ```
-And we can't access chunk names from within a live .Rmd, or the code from chunks in the document we are working on.  But this kind of 'self-awareness' can be really useful
+And *importantly*, we can't access chunk names from within a live .Rmd, or the code from chunks in the document we are working on.  But this kind of interactivity can be useful.
   
-With the {knitrExtra} package, we'll live in a different world (🦄 🦄 🦄) where the task is a snap 🫰: 
+With the {knitrExtra} package, we'll live in a different world (🦄 🦄 🦄) where the task is a snap 🫰 and interactivity is provided (from within RStudio IDE - Borrowing from Kelly Bodwin's approach in flair): 
 
 Proposed API:
 
@@ -42,8 +50,11 @@ Proposed API:
 
 library(knitrExtra)
 
-knitrExtra::chunk_code_get()
+knitrExtra::chunk_code_get("chunk_code_get_static")
+
 knitrExtra::chunk_names_get()
+
+knitrExtra::chunk_to_r("chunk_code_get_static")
 
 ```
 
@@ -271,6 +282,16 @@ It is nice to be able to grab code from chunks and send them to files for the pu
 
 
 ```{r chunk_to_dir}
+#' Title
+#'
+#' @param chunk_name 
+#' @param dir 
+#' @param extension 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R") 
 {
     for (i in 1:length(chunk_name)) {
@@ -351,7 +372,7 @@ readme2pkg::chunk_to_r(
                  "chunk_names_get", "chunk_to_dir",
                  "chunk_variants_to_dir")) 
 # Bit 3: send code chunk with function to R folder
-devtools::check(pkg = ".")  # Bit 4: check that package is minimally viable
+devtools::check(pkg = ".")  # Bit 4: check that package is minimally viable; document's as a pre-step
 devtools::install(pkg = ".", upgrade = "never") # Bit 5: install package locally
 usethis::use_lifecycle_badge("experimental") # Bit 6: add lifecycle badge
 # Bit 7 (below): Write traditional readme
@@ -376,7 +397,7 @@ Once functions are exported you can remove go to two colons, and when things are
 ```{r, eval = F}
 library(knitrExtra)  ##<< change to your package name here
 knitrExtra:::check_is_live()
-knitrExtra:::chunk_names_get()
+knitrExtra:::chunk_code_get()
 
 getNamespaceExports("knitrExtra")
 

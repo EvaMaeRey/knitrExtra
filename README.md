@@ -37,8 +37,15 @@ way as to how-to w/ rstudio API).
 Without the package, we live in the effort-ful world that follows 🏋:
 
 ``` r
-knitr::knit_code$get("times_two") |> as.vector()
-#> NULL
+# grabbing code from a chunk: 
+knitr::knit_code$get("chunk_code_get_static") |> as.vector()
+#> [1] "chunk_code_get_static <- function(chunk_name){"   
+#> [2] "  "                                               
+#> [3] "  knitr::knit_code$get(chunk_name) |> as.vector()"
+#> [4] "  "                                               
+#> [5] "}"
+
+# getting the names of chunks:
 knitr::knit_code$get() |> names()
 #>  [1] "unnamed-chunk-1"           "unnamed-chunk-2"          
 #>  [3] "chunk_code_get_static"     "unnamed-chunk-3"          
@@ -52,14 +59,20 @@ knitr::knit_code$get() |> names()
 #> [19] "unnamed-chunk-9"           "unnamed-chunk-10"         
 #> [21] "unnamed-chunk-11"          "unnamed-chunk-12"         
 #> [23] "unnamed-chunk-13"
+
+# sending code from a chunk to a stand alone file
+knitr::knit_code$get("chunk_code_get_static") |> 
+  as.vector() |> 
+  writeLines("R/chunk_code_get_static.R")
 ```
 
-And we can’t access chunk names from within a live .Rmd, or the code
-from chunks in the document we are working on. But this kind of
-‘self-awareness’ can be really useful
+And *importantly*, we can’t access chunk names from within a live .Rmd,
+or the code from chunks in the document we are working on. But this kind
+of interactivity can be useful.
 
 With the {knitrExtra} package, we’ll live in a different world (🦄 🦄 🦄)
-where the task is a snap 🫰:
+where the task is a snap 🫰 and interactivity is provided (from within
+RStudio IDE - Borrowing from Kelly Bodwin’s approach in flair):
 
 Proposed API:
 
@@ -67,8 +80,11 @@ Proposed API:
 
 library(knitrExtra)
 
-knitrExtra::chunk_code_get()
+knitrExtra::chunk_code_get("chunk_code_get_static")
+
 knitrExtra::chunk_names_get()
+
+knitrExtra::chunk_to_r("chunk_code_get_static")
 ```
 
 # Part I. Work out functionality 🚧 ✅
@@ -305,6 +321,16 @@ sending code from a package readme to an .R file in the R package
 folder.
 
 ``` r
+#' Title
+#'
+#' @param chunk_name 
+#' @param dir 
+#' @param extension 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R") 
 {
     for (i in 1:length(chunk_name)) {
@@ -383,7 +409,7 @@ readme2pkg::chunk_to_r(
                  "chunk_names_get", "chunk_to_dir",
                  "chunk_variants_to_dir")) 
 # Bit 3: send code chunk with function to R folder
-devtools::check(pkg = ".")  # Bit 4: check that package is minimally viable
+devtools::check(pkg = ".")  # Bit 4: check that package is minimally viable; document's as a pre-step
 devtools::install(pkg = ".", upgrade = "never") # Bit 5: install package locally
 usethis::use_lifecycle_badge("experimental") # Bit 6: add lifecycle badge
 # Bit 7 (below): Write traditional readme
@@ -407,7 +433,7 @@ your readme…)
 ``` r
 library(knitrExtra)  ##<< change to your package name here
 knitrExtra:::check_is_live()
-knitrExtra:::chunk_names_get()
+knitrExtra:::chunk_code_get()
 
 getNamespaceExports("knitrExtra")
 ```
@@ -509,6 +535,7 @@ fs::dir_tree(recurse = T)
 #> ├── README.md
 #> ├── knitrExtra.Rproj
 #> ├── man
-#> │   └── chunk_code_get.Rd
+#> │   ├── chunk_code_get.Rd
+#> │   └── chunk_to_dir.Rd
 #> └── readme2pkg.template.Rproj
 ```
