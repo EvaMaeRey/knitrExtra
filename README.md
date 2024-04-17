@@ -103,7 +103,7 @@ which takes advantage of the rstudioapi package.
 
 First here are some helper functions…
 
-```` r
+``` r
 # Awesome!
 check_is_live <- function(){
   
@@ -144,7 +144,7 @@ text_chunk_extract <- function(.text, chunk_name) {
   }
 
   end_chunk <- .text[-c(1:start_chunk)] |>
-    stringr::str_which(stringr::fixed("```")) |>
+    stringr::str_which(stringr::fixed("^\\`\\`\\`")) |>
     min() + start_chunk
 
   chunk_text <- .text[(start_chunk):(end_chunk)] |>
@@ -169,7 +169,7 @@ chunk_remove_fencing_and_options <- function(code_chunk){
  return(chunk_as_vec[2:(length(chunk_as_vec)-1)])
   
 }
-````
+```
 
 Then we write the live analogue to chunk\_code\_get\_static
 
@@ -269,7 +269,8 @@ chunk_names_get_live <- function(chunk_name) {
     
     names_of_named_chunks <- first_fence |> 
       stringr::str_remove("\\`\\`\\`\\{r ") |>
-      stringr::str_remove(",.+")
+      stringr::str_remove(",.+") |>
+      stringr::str_remove("\\}")
 
     names_of_named_chunks
     
@@ -371,8 +372,17 @@ chunk_variants_to_dir <- function (chunk_name, chunk_name_suffix = "_variants",
 ``` r
 devtools::create(".") # Bit 1. 1X
 ### Bit 2a: dependencies to functions using '::' syntax to pkg functions 
-usethis::use_package("ggplot2") # Bit 2b: document dependencies
-readme2pkg::chunk_to_r(chunk_name = "times_two") # Bit 3: send code chunk with function to R folder
+usethis::use_package("knitr") # Bit 2b: document dependencies
+usethis::use_package("stringr") # Bit 2b: document dependencies
+usethis::use_package("rstudioapi") # Bit 2b: document dependencies
+chunk_names_get()
+readme2pkg::chunk_to_r(
+  chunk_name = c("chunk_code_get_static" , "liveness_helpers",   
+                 "chunk_code_get_live", "chunk_code_get", 
+                 "chunk_names_get_static", "chunk_names_get_live", 
+                 "chunk_names_get", "chunk_to_dir",
+                 "chunk_variants_to_dir")) 
+# Bit 3: send code chunk with function to R folder
 devtools::check(pkg = ".")  # Bit 4: check that package is minimally viable
 devtools::install(pkg = ".", upgrade = "never") # Bit 5: install package locally
 usethis::use_lifecycle_badge("experimental") # Bit 6: add lifecycle badge
@@ -395,8 +405,11 @@ things are are really finalized, then go without colons (and rearrange
 your readme…)
 
 ``` r
-library(mypackage)  ##<< change to your package name here
-mypackage:::times_two(10)
+library(knitrExtra)  ##<< change to your package name here
+knitrExtra:::check_is_live()
+knitrExtra:::chunk_names_get()
+
+getNamespaceExports("knitrExtra")
 ```
 
 ## Phase 3: Settling and testing 🚧 ✅
@@ -480,7 +493,22 @@ devtools::check(pkg = ".")
 ``` r
 fs::dir_tree(recurse = T)
 #> .
+#> ├── DESCRIPTION
+#> ├── NAMESPACE
+#> ├── R
+#> │   ├── chunk_code_get.R
+#> │   ├── chunk_code_get_live.R
+#> │   ├── chunk_code_get_static.R
+#> │   ├── chunk_names_get.R
+#> │   ├── chunk_names_get_live.R
+#> │   ├── chunk_names_get_static.R
+#> │   ├── chunk_to_dir.R
+#> │   ├── chunk_variants_to_dir.R
+#> │   └── liveness_helpers.R
 #> ├── README.Rmd
 #> ├── README.md
+#> ├── knitrExtra.Rproj
+#> ├── man
+#> │   └── chunk_code_get.Rd
 #> └── readme2pkg.template.Rproj
 ```
