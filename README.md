@@ -36,29 +36,13 @@ way as to how-to w/ rstudio API).
 
 Without the package, we live in the effort-ful world that follows 🏋:
 
-``` r
+``` 
+
 # grabbing code from a chunk: 
 knitr::knit_code$get("chunk_code_get_static") |> as.vector()
-#> [1] "chunk_code_get_static <- function(chunk_name){"   
-#> [2] "  "                                               
-#> [3] "  knitr::knit_code$get(chunk_name) |> as.vector()"
-#> [4] "  "                                               
-#> [5] "}"
 
 # getting the names of chunks:
 knitr::knit_code$get() |> names()
-#>  [1] "unnamed-chunk-1"           "unnamed-chunk-2"          
-#>  [3] "chunk_code_get_static"     "unnamed-chunk-3"          
-#>  [5] "liveness_helpers"          "chunk_code_get_live"      
-#>  [7] "chunk_code_get"            "unnamed-chunk-4"          
-#>  [9] "chunk_names_get_static"    "chunk_names_get_live"     
-#> [11] "chunk_names_get"           "chunk_to_dir"             
-#> [13] "chunk_variants_to_dir"     "unnamed-chunk-5"          
-#> [15] "unnamed-chunk-6"           "unnamed-chunk-7"          
-#> [17] "test_calc_times_two_works" "unnamed-chunk-8"          
-#> [19] "unnamed-chunk-9"           "unnamed-chunk-10"         
-#> [21] "unnamed-chunk-11"          "unnamed-chunk-12"         
-#> [23] "unnamed-chunk-13"
 
 # sending code from a chunk to a stand alone file
 knitr::knit_code$get("chunk_code_get_static") |> 
@@ -237,7 +221,7 @@ chunk_code_get <- function(chunk_name){
   is_live <- check_is_live()
   
   if(is_live){
-    return_chunk_code_live(chunk_name)
+  chunk_code_get_live(chunk_name)
   }else{
   chunk_code_get_static(chunk_name = chunk_name)
     }
@@ -334,7 +318,7 @@ folder.
 chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R") 
 {
     for (i in 1:length(chunk_name)) {
-        writeLines(paste(chunk_code_get(chunk_name = chunk_name[i]), 
+        writeLines(paste("Do not edit by hand.\nFile generated from .rmd code chunk\n", chunk_code_get(chunk_name = chunk_name[i]), 
             collapse = "\n"), con = paste0(dir, "/", chunk_name[i], 
             extension))
     }
@@ -363,7 +347,7 @@ chunk_variants_to_dir <- function (chunk_name, chunk_name_suffix = "_variants",
                                    file_name = NULL, 
     dir = "R/", replace1, replacements1, replace2 = NULL, replacements2 = NULL, 
     replace3 = NULL, replacements3 = NULL, replace4 = NULL, replacements4 = NULL) {
-    template <- return_chunk_code(chunk_name)
+    template <- chunk_code_get(chunk_name)
     script_contents <- c()
     if (is.null(file_name)) {
         file_name <- paste0(chunk_name, chunk_name_suffix, ".R")
@@ -402,12 +386,18 @@ usethis::use_package("knitr") # Bit 2b: document dependencies
 usethis::use_package("stringr") # Bit 2b: document dependencies
 usethis::use_package("rstudioapi") # Bit 2b: document dependencies
 chunk_names_get()
+```
+
+``` r
 readme2pkg::chunk_to_r(
   chunk_name = c("chunk_code_get_static" , "liveness_helpers",   
                  "chunk_code_get_live", "chunk_code_get", 
                  "chunk_names_get_static", "chunk_names_get_live", 
                  "chunk_names_get", "chunk_to_dir",
                  "chunk_variants_to_dir")) 
+```
+
+``` r
 # Bit 3: send code chunk with function to R folder
 devtools::check(pkg = ".")  # Bit 4: check that package is minimally viable; document's as a pre-step
 devtools::install(pkg = ".", upgrade = "never") # Bit 5: install package locally
@@ -504,8 +494,8 @@ all[11:17]
 #> [3] "[1] stats     graphics  grDevices utils     datasets  methods   base     "
 #> [4] ""                                                                         
 #> [5] "loaded via a namespace (and not attached):"                               
-#> [6] " [1] compiler_4.2.2  fastmap_1.1.1   cli_3.6.1       tools_4.2.2    "     
-#> [7] " [5] htmltools_0.5.4 rstudioapi_0.14 yaml_2.3.7      rmarkdown_2.20 "
+#> [6] " [1] compiler_4.2.2        magrittr_2.0.3        fastmap_1.1.1        "   
+#> [7] " [4] cli_3.6.1             tools_4.2.2           htmltools_0.5.4      "
 ```
 
 ## `devtools::check()` report

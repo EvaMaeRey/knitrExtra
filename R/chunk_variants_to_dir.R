@@ -2,7 +2,7 @@ chunk_variants_to_dir <- function (chunk_name, chunk_name_suffix = "_variants",
                                    file_name = NULL, 
     dir = "R/", replace1, replacements1, replace2 = NULL, replacements2 = NULL, 
     replace3 = NULL, replacements3 = NULL, replace4 = NULL, replacements4 = NULL) {
-    template <- return_chunk_code(chunk_name)
+    template <- chunk_code_get(chunk_name)
     script_contents <- c()
     if (is.null(file_name)) {
         file_name <- paste0(chunk_name, chunk_name_suffix, ".R")

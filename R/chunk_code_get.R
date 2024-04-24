@@ -11,7 +11,7 @@ chunk_code_get <- function(chunk_name){
   is_live <- check_is_live()
   
   if(is_live){
-    return_chunk_code_live(chunk_name)
+  chunk_code_get_live(chunk_name)
   }else{
   chunk_code_get_static(chunk_name = chunk_name)
     }

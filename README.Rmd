@@ -27,7 +27,8 @@ The goal of {knitrExtra} is to make some of my favorite functionality a little m
 
 Without the package, we live in the effort-ful world that follows 🏋:
 
-```{r, eval = T}
+``` 
+
 # grabbing code from a chunk: 
 knitr::knit_code$get("chunk_code_get_static") |> as.vector()
 
@@ -40,6 +41,7 @@ knitr::knit_code$get("chunk_code_get_static") |>
   writeLines("R/chunk_code_get_static.R")
 
 ```
+
 And *importantly*, we can't access chunk names from within a live .Rmd, or the code from chunks in the document we are working on.  But this kind of interactivity can be useful.
   
 With the {knitrExtra} package, we'll live in a different world (🦄 🦄 🦄) where the task is a snap 🫰 and interactivity is provided (from within RStudio IDE - Borrowing from Kelly Bodwin's approach in flair): 
@@ -209,7 +211,7 @@ chunk_code_get <- function(chunk_name){
   is_live <- check_is_live()
   
   if(is_live){
-    return_chunk_code_live(chunk_name)
+  chunk_code_get_live(chunk_name)
   }else{
   chunk_code_get_static(chunk_name = chunk_name)
     }
@@ -295,7 +297,7 @@ It is nice to be able to grab code from chunks and send them to files for the pu
 chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R") 
 {
     for (i in 1:length(chunk_name)) {
-        writeLines(paste(chunk_code_get(chunk_name = chunk_name[i]), 
+        writeLines(paste("Do not edit by hand.\nFile generated from .rmd code chunk\n", chunk_code_get(chunk_name = chunk_name[i]), 
             collapse = "\n"), con = paste0(dir, "/", chunk_name[i], 
             extension))
     }
@@ -323,7 +325,7 @@ chunk_variants_to_dir <- function (chunk_name, chunk_name_suffix = "_variants",
                                    file_name = NULL, 
     dir = "R/", replace1, replacements1, replace2 = NULL, replacements2 = NULL, 
     replace3 = NULL, replacements3 = NULL, replace4 = NULL, replacements4 = NULL) {
-    template <- return_chunk_code(chunk_name)
+    template <- chunk_code_get(chunk_name)
     script_contents <- c()
     if (is.null(file_name)) {
         file_name <- paste0(chunk_name, chunk_name_suffix, ".R")
@@ -365,12 +367,18 @@ usethis::use_package("knitr") # Bit 2b: document dependencies
 usethis::use_package("stringr") # Bit 2b: document dependencies
 usethis::use_package("rstudioapi") # Bit 2b: document dependencies
 chunk_names_get()
+```
+
+```{r}
 readme2pkg::chunk_to_r(
   chunk_name = c("chunk_code_get_static" , "liveness_helpers",   
                  "chunk_code_get_live", "chunk_code_get", 
                  "chunk_names_get_static", "chunk_names_get_live", 
                  "chunk_names_get", "chunk_to_dir",
                  "chunk_variants_to_dir")) 
+```
+
+```{r, eval = F}
 # Bit 3: send code chunk with function to R folder
 devtools::check(pkg = ".")  # Bit 4: check that package is minimally viable; document's as a pre-step
 devtools::install(pkg = ".", upgrade = "never") # Bit 5: install package locally
