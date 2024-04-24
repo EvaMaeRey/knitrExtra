@@ -1,11 +1,15 @@
+#' Title
+#'
+#' @return
+#' @export
+#'
+#' @examples
 chunk_names_get <- function(){
   
-  is_live <- check_is_live()
+  rmd_df <- parse_current_rmd()
   
-  if(is_live){
-    chunk_names_get_live()
-  }else{
-  chunk_names_get_static()
-    }
-
+  chunks_info <- subset(rmd_df, !is.na(rmd_df$label)) |> as.data.frame() 
+  
+  chunks_info[,"label"]
+  
 }

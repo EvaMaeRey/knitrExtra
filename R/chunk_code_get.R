@@ -6,14 +6,12 @@
 #' @export 
 #'
 #' @examples
-chunk_code_get <- function(chunk_name){
+chunk_code_get <- function(chunk_name = "chunk_code_get"){
   
-  is_live <- check_is_live()
+  rmd_df <- parse_current_rmd()
   
-  if(is_live){
-  chunk_code_get_live(chunk_name)
-  }else{
-  chunk_code_get_static(chunk_name = chunk_name)
-    }
-
+  chunk_info <- subset(rmd_df, rmd_df$label == chunk_name) 
+  
+  chunk_info[,"code"][[1]][[1]] |> as.vector()
+  
 }

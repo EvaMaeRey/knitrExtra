@@ -11,9 +11,10 @@
 chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R") 
 {
     for (i in 1:length(chunk_name)) {
-        writeLines(paste("Do not edit by hand.\nFile generated from .rmd code chunk\n", chunk_code_get(chunk_name = chunk_name[i]), 
-            collapse = "\n"), con = paste0(dir, "/", chunk_name[i], 
-            extension))
+        writeLines(
+          paste(chunk_code_get(chunk_name = chunk_name[i]), 
+            collapse = "\n"), 
+          con = paste0(dir, "/", chunk_name[i], extension))
     }
 }
 

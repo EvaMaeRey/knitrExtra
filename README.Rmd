@@ -64,12 +64,44 @@ knitrExtra::chunk_to_r("chunk_code_get_static")
 
 # Part I. Work out functionality  🚧 ✅ 
 
-First, let's just create a designated function for getting code from a chunk via the knit_code$get method.
+First, a helper function from the lightparser
 
-```{r chunk_code_get_static}
-chunk_code_get_static <- function(chunk_name){
+```{r parse_current_rmd}
+parse_current_rmd <- function(){
   
-  knitr::knit_code$get(chunk_name) |> as.vector()
+    ed        <- rstudioapi::getSourceEditorContext()
+    source    <- ed$contents
+    
+    tmp <- tempfile()
+    writeLines(source, tmp)
+    
+    lightparser::split_to_tbl(tmp)
+
+}    
+```
+
+
+```{r}
+parse_current_rmd()  
+```
+
+
+```{r chunk_code_get}
+#' Title
+#'
+#' @param chunk_name a character string with the name of the chunk of interest
+#'
+#' @return a vector of the code contained in the referenced chunk
+#' @export 
+#'
+#' @examples
+chunk_code_get <- function(chunk_name = "chunk_code_get"){
+  
+  rmd_df <- parse_current_rmd()
+  
+  chunk_info <- subset(rmd_df, rmd_df$label == chunk_name) 
+  
+  chunk_info[,"code"][[1]][[1]] |> as.vector()
   
 }
 ```
@@ -82,199 +114,38 @@ chunk_code_get_static <- function(chunk_name){
 If we knit our document we'll see that these functions work
 
 ```{r}
-chunk_code_get_static("chunk_code_get_static")
+chunk_code_get("chunk_code_get")
 ```
 
-Now, both of the above functions work in a static context.  To have get the same behavior 'live', we'll use roughly Kelly Bodwin's approach which takes advantage of the rstudioapi package.  
-
-First here are some helper functions...
-
-
-```{r liveness_helpers}
-# Awesome!
-check_is_live <- function(){
-  
-  is_live <- FALSE
-  
-  # Check to see if we're in editor context
-  if (requireNamespace("rstudioapi", quietly = TRUE) &&
-      rstudioapi::isAvailable()) {
-
-    is_live <- tryCatch({
-      rstudioapi::getSourceEditorContext()
-      TRUE
-    }, error = function(e) FALSE)
-
-  }  
-  
-  return(is_live)
-  
-}
-
-# so cool!
-text_chunk_extract <- function(.text, chunk_name) {
-
-  # Find the start of the desired chunk
-  chunk_regex <- paste0('\\`\\`\\`\\{[A-z]+ ', chunk_name, '(\\}|(,.*\\}))$')
-
-  start_chunk <- .text |>
-    stringr::str_which(chunk_regex)
-
-  if (length(start_chunk) == 0) {
-
-    stop(paste0("Error: No chunk found with name '", chunk_name, "'"))
-
-  } else if (length(start_chunk) > 1) {
-
-    stop(paste0("Error: Duplicate chunk name '", chunk_name, "'"))
-
-  }
-
-  end_chunk <- .text[-c(1:start_chunk)] |>
-    stringr::str_which(stringr::fixed("^\\`\\`\\`")) |>
-    min() + start_chunk
-
-  chunk_text <- .text[(start_chunk):(end_chunk)] |>
-    stringr::str_c(collapse = "\n")
-
-  attributes(chunk_text) <- NULL
-
-  return(chunk_text)
-
-}
-
-chunk_remove_fencing_and_options <- function(code_chunk){
-  
-  # does not yet, in fact, remove options like these: 
-  # | my-chunk, echo = FALSE, fig.width = 10,
-  # | fig.cap = "This is a long long
-  # |   long long caption."
-  
- chunk_as_vec <- stringr::str_split(code_chunk,"\\n")[[1]] 
- 
- # remove fencing which are first and last lines
- return(chunk_as_vec[2:(length(chunk_as_vec)-1)])
-  
-}
-
-
-
-```
-
-
-Then we write the live analogue to chunk_code_get_static
-
-```{r chunk_code_get_live}
-# wow!
-chunk_code_get_live <- function(chunk_name) {
-
-  
-    ed        <- rstudioapi::getSourceEditorContext()
-    source    <- ed$contents
-
-    # can we use knitr tools to directly parse source for us? 
-    # tmp       <- tempfile()
-    # writeLines(source, tmp)
-    # readLines(tmp)
-    # knitr::knit_code$get(name = tmp)
-    
-    my_code_chunk  <- text_chunk_extract(.text = source, chunk_name)
-
-    # If neither of those worked, error
-    if (is.null(my_code_chunk)) {
-
-    stop(paste0("Error: No chunk found with name '", chunk_name, "'"))
-
-    }
-
-    # remove chunk fencing, first and last lines
-    my_code <- chunk_remove_fencing_and_options(my_code_chunk)
-    
-    return(my_code)
-  
-}
-```
-
-And we finally combine the static and live versions into one function... `chunk_code_get()` which is exported.
-
-```{r chunk_code_get}
-#' Title
-#'
-#' @param chunk_name a character string with the name of the chunk of interest
-#'
-#' @return a vector of the code contained in the referenced chunk
-#' @export 
-#'
-#' @examples
-chunk_code_get <- function(chunk_name){
-  
-  is_live <- check_is_live()
-  
-  if(is_live){
-  chunk_code_get_live(chunk_name)
-  }else{
-  chunk_code_get_static(chunk_name = chunk_name)
-    }
-
-}
-```
-
-# Try it out!  Should return equivelantly in live session or 'knitted' version.
-
-```{r}
-chunk_code_get("chunk_code_get_static")
-```
 
 
 # Return chunk names
 
 First we just alias knitr::all_label() to a function that's named more in line with others in this package.  
 
-```{r chunk_names_get_static}
-chunk_names_get_static <- function(){
-  
-  knitr::all_labels()
-  
-}
-```
-
-Then we ust the rstudioapi package to look at the live document and pull out chunk names (just using regular expressions - don't love this... Seems like source should be saved as a temp file and evaluated directly by knitr tools?)
-
-```{r chunk_names_get_live}
-chunk_names_get_live <- function(chunk_name) {
-
-    ed        <- rstudioapi::getSourceEditorContext()
-    source    <- ed$contents
-
-    
-    first_fence <- source[grep("\\`\\`\\`\\{r ", source)]
-    
-    names_of_named_chunks <- first_fence |> 
-      stringr::str_remove("\\`\\`\\`\\{r ") |>
-      stringr::str_remove(",.+") |>
-      stringr::str_remove("\\}")
-
-    names_of_named_chunks
-    
-}
-```
-
-We combine the static and live versions into `chunk_names_get()` which should be exported.  Note that the live v. static behavior is currently different and only named chunks will appear in the live list.  This isn't ideal, but it's where the project is right now.
-
-
 ```{r chunk_names_get}
+#' Title
+#'
+#' @return
+#' @export
+#'
+#' @examples
 chunk_names_get <- function(){
   
-  is_live <- check_is_live()
+  rmd_df <- parse_current_rmd()
   
-  if(is_live){
-    chunk_names_get_live()
-  }else{
-  chunk_names_get_static()
-    }
-
+  chunks_info <- subset(rmd_df, !is.na(rmd_df$label)) |> as.data.frame() 
+  
+  chunks_info[,"label"]
+  
 }
 ```
+
+```{r}
+chunk_names_get()
+
+```
+
 
 # Code from chunks to files
 
@@ -297,9 +168,10 @@ It is nice to be able to grab code from chunks and send them to files for the pu
 chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R") 
 {
     for (i in 1:length(chunk_name)) {
-        writeLines(paste("Do not edit by hand.\nFile generated from .rmd code chunk\n", chunk_code_get(chunk_name = chunk_name[i]), 
-            collapse = "\n"), con = paste0(dir, "/", chunk_name[i], 
-            extension))
+        writeLines(
+          paste(chunk_code_get(chunk_name = chunk_name[i]), 
+            collapse = "\n"), 
+          con = paste0(dir, "/", chunk_name[i], extension))
     }
 }
 
@@ -315,6 +187,12 @@ chunk_to_tests_testthat <- function (chunk_name)
 {
     chunk_to_dir(chunk_name = chunk_name, dir = "tests/testthat/")
 }
+```
+
+
+```{r}
+chunk_to_dir("chunk_to_dir")
+
 ```
 
 Finally, functionality (and the implementation) that I'm uncertain about is  `chunk_variants_to_dir()`  This is an interesting meta programming solution, perhaps. 
@@ -361,21 +239,21 @@ chunk_variants_to_dir <- function (chunk_name, chunk_name_suffix = "_variants",
 
 
 ```{r, eval = F}
-devtools::create(".") # Bit 1. 1X
+# devtools::create(".") # Bit 1. 1X
 ### Bit 2a: dependencies to functions using '::' syntax to pkg functions 
-usethis::use_package("knitr") # Bit 2b: document dependencies
-usethis::use_package("stringr") # Bit 2b: document dependencies
 usethis::use_package("rstudioapi") # Bit 2b: document dependencies
+usethis::use_package("stringr") # Bit 2b: document dependencies
+usethis::use_dev_package(package = "lightparser", remote = "ThinkR-open/lightparser")
+
 chunk_names_get()
 ```
 
 ```{r}
-readme2pkg::chunk_to_r(
-  chunk_name = c("chunk_code_get_static" , "liveness_helpers",   
-                 "chunk_code_get_live", "chunk_code_get", 
-                 "chunk_names_get_static", "chunk_names_get_live", 
-                 "chunk_names_get", "chunk_to_dir",
-                 "chunk_variants_to_dir")) 
+chunk_to_r("parse_current_rmd")
+chunk_to_r("chunk_code_get")
+chunk_to_r("chunk_names_get")
+chunk_to_r("chunk_to_dir")
+chunk_to_r("chunk_variants_to_dir") 
 ```
 
 ```{r, eval = F}
@@ -404,8 +282,10 @@ Once functions are exported you can remove go to two colons, and when things are
 
 ```{r, eval = F}
 library(knitrExtra)  ##<< change to your package name here
-knitrExtra:::check_is_live()
-knitrExtra:::chunk_code_get()
+knitrExtra::chunk_names_get()
+knitrExtra::chunk_code_get("chunk_to_dir")
+knitrExtra:::parse_current_rmd()
+
 
 getNamespaceExports("knitrExtra")
 

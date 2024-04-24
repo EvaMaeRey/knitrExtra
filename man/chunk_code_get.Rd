@@ -4,7 +4,7 @@
 \alias{chunk_code_get}
 \title{Title}
 \usage{
-chunk_code_get(chunk_name)
+chunk_code_get(chunk_name = "chunk_code_get")
 }
 \arguments{
 \item{chunk_name}{a character string with the name of the chunk of interest}

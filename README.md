@@ -3,9 +3,6 @@
   - [Part I. Work out functionality 🚧
     ✅](#part-i-work-out-functionality--)
       - [Try it out](#try-it-out)
-  - [Try it out\! Should return equivelantly in live session or
-    ‘knitted’
-    version.](#try-it-out-should-return-equivelantly-in-live-session-or-knitted-version)
   - [Return chunk names](#return-chunk-names)
   - [Code from chunks to files](#code-from-chunks-to-files)
   - [Part II. Packaging and documentation 🚧
@@ -73,139 +70,40 @@ knitrExtra::chunk_to_r("chunk_code_get_static")
 
 # Part I. Work out functionality 🚧 ✅
 
-First, let’s just create a designated function for getting code from a
-chunk via the knit\_code$get method.
+First, a helper function from the lightparser
 
 ``` r
-chunk_code_get_static <- function(chunk_name){
-  
-  knitr::knit_code$get(chunk_name) |> as.vector()
-  
-}
-```
-
-## Try it out
-
-If we knit our document we’ll see that these functions work
-
-``` r
-chunk_code_get_static("chunk_code_get_static")
-#> [1] "chunk_code_get_static <- function(chunk_name){"   
-#> [2] "  "                                               
-#> [3] "  knitr::knit_code$get(chunk_name) |> as.vector()"
-#> [4] "  "                                               
-#> [5] "}"
-```
-
-Now, both of the above functions work in a static context. To have get
-the same behavior ‘live’, we’ll use roughly Kelly Bodwin’s approach
-which takes advantage of the rstudioapi package.
-
-First here are some helper functions…
-
-``` r
-# Awesome!
-check_is_live <- function(){
-  
-  is_live <- FALSE
-  
-  # Check to see if we're in editor context
-  if (requireNamespace("rstudioapi", quietly = TRUE) &&
-      rstudioapi::isAvailable()) {
-
-    is_live <- tryCatch({
-      rstudioapi::getSourceEditorContext()
-      TRUE
-    }, error = function(e) FALSE)
-
-  }  
-  
-  return(is_live)
-  
-}
-
-# so cool!
-text_chunk_extract <- function(.text, chunk_name) {
-
-  # Find the start of the desired chunk
-  chunk_regex <- paste0('\\`\\`\\`\\{[A-z]+ ', chunk_name, '(\\}|(,.*\\}))$')
-
-  start_chunk <- .text |>
-    stringr::str_which(chunk_regex)
-
-  if (length(start_chunk) == 0) {
-
-    stop(paste0("Error: No chunk found with name '", chunk_name, "'"))
-
-  } else if (length(start_chunk) > 1) {
-
-    stop(paste0("Error: Duplicate chunk name '", chunk_name, "'"))
-
-  }
-
-  end_chunk <- .text[-c(1:start_chunk)] |>
-    stringr::str_which(stringr::fixed("^\\`\\`\\`")) |>
-    min() + start_chunk
-
-  chunk_text <- .text[(start_chunk):(end_chunk)] |>
-    stringr::str_c(collapse = "\n")
-
-  attributes(chunk_text) <- NULL
-
-  return(chunk_text)
-
-}
-
-chunk_remove_fencing_and_options <- function(code_chunk){
-  
-  # does not yet, in fact, remove options like these: 
-  # | my-chunk, echo = FALSE, fig.width = 10,
-  # | fig.cap = "This is a long long
-  # |   long long caption."
-  
- chunk_as_vec <- stringr::str_split(code_chunk,"\\n")[[1]] 
- 
- # remove fencing which are first and last lines
- return(chunk_as_vec[2:(length(chunk_as_vec)-1)])
-  
-}
-```
-
-Then we write the live analogue to chunk\_code\_get\_static
-
-``` r
-# wow!
-chunk_code_get_live <- function(chunk_name) {
-
+parse_current_rmd <- function(){
   
     ed        <- rstudioapi::getSourceEditorContext()
     source    <- ed$contents
-
-    # can we use knitr tools to directly parse source for us? 
-    # tmp       <- tempfile()
-    # writeLines(source, tmp)
-    # readLines(tmp)
-    # knitr::knit_code$get(name = tmp)
     
-    my_code_chunk  <- text_chunk_extract(.text = source, chunk_name)
-
-    # If neither of those worked, error
-    if (is.null(my_code_chunk)) {
-
-    stop(paste0("Error: No chunk found with name '", chunk_name, "'"))
-
-    }
-
-    # remove chunk fencing, first and last lines
-    my_code <- chunk_remove_fencing_and_options(my_code_chunk)
+    tmp <- tempfile()
+    writeLines(source, tmp)
     
-    return(my_code)
-  
-}
+    lightparser::split_to_tbl(tmp)
+
+}    
 ```
 
-And we finally combine the static and live versions into one function…
-`chunk_code_get()` which is exported.
+``` r
+parse_current_rmd()  
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+#> # A tibble: 98 × 8
+#>    type    label          params       text  code  heading heading_level section
+#>    <chr>   <chr>          <list>       <nam> <lis> <chr>           <dbl> <chr>  
+#>  1 yaml    <NA>           <named list> <lgl> <lgl>  <NA>              NA  <NA>  
+#>  2 inline  <NA>           <lgl [1]>    <chr> <lgl>  <NA>              NA  <NA>  
+#>  3 block   unnamed-chunk… <named list> <lgl> <chr>  <NA>              NA  <NA>  
+#>  4 inline  <NA>           <lgl [1]>    <chr> <lgl>  <NA>              NA  <NA>  
+#>  5 heading <NA>           <lgl [1]>    <chr> <lgl> "Part …             1 "Part …
+#>  6 inline  <NA>           <lgl [1]>    <chr> <lgl>  <NA>              NA "Part …
+#>  7 heading <NA>           <lgl [1]>    <chr> <lgl> "grabb…             1 "grabb…
+#>  8 inline  <NA>           <lgl [1]>    <chr> <lgl>  <NA>              NA "grabb…
+#>  9 heading <NA>           <lgl [1]>    <chr> <lgl> "getti…             1 "getti…
+#> 10 inline  <NA>           <lgl [1]>    <chr> <lgl>  <NA>              NA "getti…
+#> # ℹ 88 more rows
+```
 
 ``` r
 #' Title
@@ -216,28 +114,41 @@ And we finally combine the static and live versions into one function…
 #' @export 
 #'
 #' @examples
-chunk_code_get <- function(chunk_name){
+chunk_code_get <- function(chunk_name = "chunk_code_get"){
   
-  is_live <- check_is_live()
+  rmd_df <- parse_current_rmd()
   
-  if(is_live){
-  chunk_code_get_live(chunk_name)
-  }else{
-  chunk_code_get_static(chunk_name = chunk_name)
-    }
-
+  chunk_info <- subset(rmd_df, rmd_df$label == chunk_name) 
+  
+  chunk_info[,"code"][[1]][[1]] |> as.vector()
+  
 }
 ```
 
-# Try it out\! Should return equivelantly in live session or ‘knitted’ version.
+## Try it out
+
+If we knit our document we’ll see that these functions work
 
 ``` r
-chunk_code_get("chunk_code_get_static")
-#> [1] "chunk_code_get_static <- function(chunk_name){"   
-#> [2] "  "                                               
-#> [3] "  knitr::knit_code$get(chunk_name) |> as.vector()"
-#> [4] "  "                                               
-#> [5] "}"
+chunk_code_get("chunk_code_get")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+#>  [1] "#' Title"                                                                      
+#>  [2] "#'"                                                                            
+#>  [3] "#' @param chunk_name a character string with the name of the chunk of interest"
+#>  [4] "#'"                                                                            
+#>  [5] "#' @return a vector of the code contained in the referenced chunk"             
+#>  [6] "#' @export "                                                                   
+#>  [7] "#'"                                                                            
+#>  [8] "#' @examples"                                                                  
+#>  [9] "chunk_code_get <- function(chunk_name = \"chunk_code_get\"){"                  
+#> [10] "  "                                                                            
+#> [11] "  rmd_df <- parse_current_rmd()"                                               
+#> [12] "  "                                                                            
+#> [13] "  chunk_info <- subset(rmd_df, rmd_df$label == chunk_name) "                   
+#> [14] "  "                                                                            
+#> [15] "  chunk_info[,\"code\"][[1]][[1]] |> as.vector()"                              
+#> [16] "  "                                                                            
+#> [17] "}"
 ```
 
 # Return chunk names
@@ -246,54 +157,37 @@ First we just alias knitr::all\_label() to a function that’s named more
 in line with others in this package.
 
 ``` r
-chunk_names_get_static <- function(){
-  
-  knitr::all_labels()
-  
-}
-```
-
-Then we ust the rstudioapi package to look at the live document and pull
-out chunk names (just using regular expressions - don’t love this… Seems
-like source should be saved as a temp file and evaluated directly by
-knitr tools?)
-
-``` r
-chunk_names_get_live <- function(chunk_name) {
-
-    ed        <- rstudioapi::getSourceEditorContext()
-    source    <- ed$contents
-
-    
-    first_fence <- source[grep("\\`\\`\\`\\{r ", source)]
-    
-    names_of_named_chunks <- first_fence |> 
-      stringr::str_remove("\\`\\`\\`\\{r ") |>
-      stringr::str_remove(",.+") |>
-      stringr::str_remove("\\}")
-
-    names_of_named_chunks
-    
-}
-```
-
-We combine the static and live versions into `chunk_names_get()` which
-should be exported. Note that the live v. static behavior is currently
-different and only named chunks will appear in the live list. This isn’t
-ideal, but it’s where the project is right now.
-
-``` r
+#' Title
+#'
+#' @return
+#' @export
+#'
+#' @examples
 chunk_names_get <- function(){
   
-  is_live <- check_is_live()
+  rmd_df <- parse_current_rmd()
   
-  if(is_live){
-    chunk_names_get_live()
-  }else{
-  chunk_names_get_static()
-    }
-
+  chunks_info <- subset(rmd_df, !is.na(rmd_df$label)) |> as.data.frame() 
+  
+  chunks_info[,"label"]
+  
 }
+```
+
+``` r
+chunk_names_get()
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+#>  [1] "unnamed-chunk-1"           "parse_current_rmd"        
+#>  [3] "unnamed-chunk-2"           "chunk_code_get"           
+#>  [5] "unnamed-chunk-3"           "chunk_names_get"          
+#>  [7] "unnamed-chunk-4"           "chunk_to_dir"             
+#>  [9] "unnamed-chunk-5"           "chunk_variants_to_dir"    
+#> [11] "unnamed-chunk-6"           "unnamed-chunk-7"          
+#> [13] "unnamed-chunk-8"           "unnamed-chunk-9"          
+#> [15] "unnamed-chunk-10"          "test_calc_times_two_works"
+#> [17] "unnamed-chunk-11"          "unnamed-chunk-12"         
+#> [19] "unnamed-chunk-13"          "unnamed-chunk-14"         
+#> [21] "unnamed-chunk-15"          "unnamed-chunk-16"
 ```
 
 # Code from chunks to files
@@ -318,9 +212,10 @@ folder.
 chunk_to_dir <- function (chunk_name, dir = "R/", extension = ".R") 
 {
     for (i in 1:length(chunk_name)) {
-        writeLines(paste("Do not edit by hand.\nFile generated from .rmd code chunk\n", chunk_code_get(chunk_name = chunk_name[i]), 
-            collapse = "\n"), con = paste0(dir, "/", chunk_name[i], 
-            extension))
+        writeLines(
+          paste(chunk_code_get(chunk_name = chunk_name[i]), 
+            collapse = "\n"), 
+          con = paste0(dir, "/", chunk_name[i], extension))
     }
 }
 
@@ -336,6 +231,11 @@ chunk_to_tests_testthat <- function (chunk_name)
 {
     chunk_to_dir(chunk_name = chunk_name, dir = "tests/testthat/")
 }
+```
+
+``` r
+chunk_to_dir("chunk_to_dir")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
 ```
 
 Finally, functionality (and the implementation) that I’m uncertain about
@@ -380,21 +280,26 @@ chunk_variants_to_dir <- function (chunk_name, chunk_name_suffix = "_variants",
 ### Bit A. Created package archetecture, running `devtools::create(".")` in interactive session. 🚧 ✅
 
 ``` r
-devtools::create(".") # Bit 1. 1X
+# devtools::create(".") # Bit 1. 1X
 ### Bit 2a: dependencies to functions using '::' syntax to pkg functions 
-usethis::use_package("knitr") # Bit 2b: document dependencies
-usethis::use_package("stringr") # Bit 2b: document dependencies
 usethis::use_package("rstudioapi") # Bit 2b: document dependencies
+usethis::use_package("stringr") # Bit 2b: document dependencies
+usethis::use_dev_package(package = "lightparser", remote = "ThinkR-open/lightparser")
+
 chunk_names_get()
 ```
 
 ``` r
-readme2pkg::chunk_to_r(
-  chunk_name = c("chunk_code_get_static" , "liveness_helpers",   
-                 "chunk_code_get_live", "chunk_code_get", 
-                 "chunk_names_get_static", "chunk_names_get_live", 
-                 "chunk_names_get", "chunk_to_dir",
-                 "chunk_variants_to_dir")) 
+chunk_to_r("parse_current_rmd")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+chunk_to_r("chunk_code_get")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+chunk_to_r("chunk_names_get")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+chunk_to_r("chunk_to_dir")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+chunk_to_r("chunk_variants_to_dir") 
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
 ```
 
 ``` r
@@ -422,8 +327,10 @@ your readme…)
 
 ``` r
 library(knitrExtra)  ##<< change to your package name here
-knitrExtra:::check_is_live()
-knitrExtra:::chunk_code_get()
+knitrExtra::chunk_names_get()
+knitrExtra::chunk_code_get("chunk_to_dir")
+knitrExtra:::parse_current_rmd()
+
 
 getNamespaceExports("knitrExtra")
 ```
@@ -489,13 +396,13 @@ Here I just want to print the packages and the versions
 ``` r
 all <- sessionInfo() |> print() |> capture.output()
 all[11:17]
-#> [1] ""                                                                         
-#> [2] "attached base packages:"                                                  
-#> [3] "[1] stats     graphics  grDevices utils     datasets  methods   base     "
-#> [4] ""                                                                         
-#> [5] "loaded via a namespace (and not attached):"                               
-#> [6] " [1] compiler_4.2.2        magrittr_2.0.3        fastmap_1.1.1        "   
-#> [7] " [4] cli_3.6.1             tools_4.2.2           htmltools_0.5.4      "
+#> [1] ""                                                                            
+#> [2] "attached base packages:"                                                     
+#> [3] "[1] stats     graphics  grDevices utils     datasets  methods   base     "   
+#> [4] ""                                                                            
+#> [5] "loaded via a namespace (and not attached):"                                  
+#> [6] " [1] lightparser_0.0.1 ps_1.7.2          fansi_1.0.5       utf8_1.2.3       "
+#> [7] " [5] digest_0.6.31     R6_2.5.1          lifecycle_1.0.3   magrittr_2.0.3   "
 ```
 
 ## `devtools::check()` report
@@ -513,19 +420,16 @@ fs::dir_tree(recurse = T)
 #> ├── NAMESPACE
 #> ├── R
 #> │   ├── chunk_code_get.R
-#> │   ├── chunk_code_get_live.R
-#> │   ├── chunk_code_get_static.R
 #> │   ├── chunk_names_get.R
-#> │   ├── chunk_names_get_live.R
-#> │   ├── chunk_names_get_static.R
 #> │   ├── chunk_to_dir.R
 #> │   ├── chunk_variants_to_dir.R
-#> │   └── liveness_helpers.R
+#> │   └── parse_current_rmd.R
 #> ├── README.Rmd
 #> ├── README.md
 #> ├── knitrExtra.Rproj
 #> ├── man
 #> │   ├── chunk_code_get.Rd
+#> │   ├── chunk_names_get.Rd
 #> │   └── chunk_to_dir.Rd
 #> └── readme2pkg.template.Rproj
 ```
